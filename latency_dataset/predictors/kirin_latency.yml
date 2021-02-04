@@ -1,0 +1,5 @@
+feature-norm: [1024, 6, 2048, 4, 1024, 6, 2048, 4, 4, 2]
+lat-norm: 300
+hidden-dim: 400 #not for the kirin
+hidden-layer-num: 3 #not for kirin
+feature-dim: 10

@@ -1,0 +1,31 @@
+n_iter: 20
+bucket_num: 128
+reserved_outliers: 128
+
+n_centroids:
+    LinearSuper:
+        key: in_features
+        value: {"*": 256}
+    EmbeddingSuper:
+        key: embedding_dim
+        value: {"*": 256}
+
+# Block Sizes for Product Quantization
+# We suggest: 8 for FFN, 4 for ATTN, 4 for embedding projections, 8 for embeddings
+block_sizes:
+  LinearSuper:
+      key: fuzzy_name
+      value: {fc: 8, attn: 4, emb: 4}
+  EmbeddingSuper:
+      key: fuzzy_name
+      value: {emb: 8}
+
+# Layers to Quantize Sequentially
+# We suggest: first FFN, then EMB, then ATTN
+layers_to_quantize:
+    - encoder\.layers\.\d+\.fc[12]
+    - encoder\.embed_tokens
+    - encoder\.layers\.\d+\.self_attn\.(k_proj|v_proj|q_proj|out_proj)
+    - decoder\.layers\.\d+\.fc[12]
+    - decoder\.embed_tokens
+    - decoder\.layers\.\d+\.(self_attn|encoder_attn)\.(k_proj|v_proj|q_proj|out_proj)

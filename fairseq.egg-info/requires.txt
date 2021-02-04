@@ -1,0 +1,12 @@
+cffi
+fastBPE
+numpy
+regex
+sacrebleu
+torch
+tqdm
+cython
+configargparse
+ujson
+tensorboardx
+sacremoses

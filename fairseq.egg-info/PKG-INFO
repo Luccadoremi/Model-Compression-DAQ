@@ -1,0 +1,177 @@
+Metadata-Version: 2.1
+Name: fairseq
+Version: 0.8.0
+Summary: HAT: Hardware-Aware Transformers for Efficient Natural Language Processing
+Home-page: https://github.com/mit-han-lab/hardware-aware-transformers
+License: UNKNOWN
+Description: # HAT [[paper]](https://arxiv.org/abs/2005.14187) + Training with Quantization Noise for Extreme Model Compression [[paper]](https://arxiv.org/abs/2004.07320)
+        
+        This repository contains the application of *Training with Quantization Noise for Extreme Model Compression* on HAT. With that we achieve high compression rates.
+        
+        ## Usage
+        
+        ### Installation
+        To install from source and develop locally:
+        
+        ```bash
+        git clone https://rnd-gitlab-eu.huawei.com/insightgroup/machine_translation/hat.git
+        cd hat
+        pip install --editable .
+        ```
+        
+        ### Training
+        
+        #### 1. Train a SuperTransformer
+        The SuperTransformer is a supernet that contains many SubTransformers with weight-sharing.
+        By default, we train WMT tasks on 8 GPUs. Please adjust `--update-freq` according to GPU numbers (`128/x` for x GPUs). Note that for IWSLT, we only train on one GPU with `--update-freq=1`. 
+        ```bash
+        python train-our.py --configs=configs/[task_name]/supertransformer/[search_space].yml
+        # for example
+        python train-our.py --configs=configs/wmt14.en-de/supertransformer/space0.yml
+        # another example
+        CUDA_VISIBLE_DEVICES=0,1,2,3 python train-our.py --configs=configs/wmt14.en-fr/supertransformer/space0.yml --update-freq=32
+        ```
+        In the `--configs` file, SuperTransformer model architecture, SubTransformer search space and training settings are specified.
+        
+        #### 3. Train a Searched SubTransformer
+        For details please check the script.
+        
+        ```bash
+        # run with default arguments 
+        ./train.sh
+        
+        # for example this will run a subtransformer training with quantization noise
+        ./train.sh our quant_noise
+        
+        # this will quantized all weights for details check corresponding yml files
+        ./train.sh our post_quant-quant_noise-n5
+        
+        # to provide model.yml for a dataset, train.sh can be run like following
+        # ./train.sh <ARCH> <COMMON.YML-TYPE> <GPUs> <DATASET> <MODEL.YML>
+        ./train.sh our post_quant-quant_noise-n5 0,1 iwslt14.de-en HAT_iwslt14deen_titanxp@168.8ms_bleu@34.8.yml
+        ```
+        #### Test BLEU (SacreBLEU) score:
+        For details please check the script.
+        
+        ```bash
+        # run with default arguments
+        ./test.sh
+        
+        # Calculate BLEU score for non-quantized model
+        ./test.sh our quant_noise
+        
+        # Calculate BLEU score for a quantized model (you need to provide quantization config path)
+        ./test.sh our post_quant-quant_noise-n5 configs/iwslt14.de-en/subtransformer/pq-quantization-n5.yml
+        ```
+        
+        #### 6. Benchmarks
+        HMS zh-en(Shared Vocab):
+            
+        |         | Quant Type        | Quant. Noise | Bucket | BLEU      | Model Size |
+        |---------|-------------------|--------------|--------|-----------|------------|
+        | BaseHAT | N/A               | ✗            | -      | **37.1**  | 230MB      |
+        | HAT     | Scalar-8bit       | ✗            | -      | 34.42     | 58MB       |
+        | HAT     | Scalar-4bit       | ✗            | -      | **34.57** | 29MB       |
+        | BaseHAT | N/A               | ✓            | -      | 36.5      | 230MB      |
+        | HAT     | IPQ               | ✗            | -      | 27.8      | 13MB       |
+        | HAT     | IPQ               | ✓            | -      | 26.9      | 13MB       |
+        | HAT     | IPQ + bucket      | ✗            | 32     | 29.45     | 22MB       |
+        | HAT     | IPQ + bucket      | ✗            | 64     | 30.63     | 35MB       |
+        | HAT     | IPQ+Bucket+Scalar | ✗            | 64     | ??        | ??         |
+        
+        
+        
+        IWSLT de-en:
+        
+        
+        |         | Quant Type   | Quant. Noise | Bucket | Block Size | FT Epoch | BLEU      | Model Size |
+        |---------|--------------|--------------|--------|------------|----------|-----------|------------|
+        | BaseHAT | N/A          | ✓            | -      |            | -        | 34.02     | 264MB      |
+        | HAT     | Scalar-8bit  | ✓            | -      | -          | -        | 33.95     | 66MB       |
+        | HAT     | Scalar-4bit  | ✓            | -      | -          | -        | 33.75     | 33MB       |
+        | BaseHAT | N/A          | ✗            | -      |            | -        | **34.35** | 264MB      |
+        | HAT     | IPQ          | ✗            | -      | 8-4-4-8    | 12       | 00.00     | 20MB       |
+        | HAT     | IPQ + bucket | ✗            | 16     | 8-4-4-8    | -        | -----     | ----       |
+        | HAT     | IPQ + bucket | ✗            | 32     | 8-4-4-8    | 12       | 33.63     | 28MB       |
+        | HAT     | IPQ          | ✓            | -      | 8-4-4-8    | 12       | 32.95     | **20MB**   |
+        | HAT     | IPQ          | ✓            | -      | 8-4-4-8    | 24       | 33.56     | **20MB**   |
+        | HAT     | IPQ          | ✓            | -      | 8-4-4-8    | 48       | 33.45     | **20MB**   |
+        | HAT     | IPQ + bucket | ✓            | 16     | 8-4-4-8    | 12       | 33.59     | 24MB       |
+        | HAT     | IPQ + bucket | ✓            | 32     | 8-4-4-8    | 12       | 34.02     | 28MB       |
+        | HAT     | IPQ + bucket | ✓            | 32     | 8-4-4-8    | 24       | 34.21     | 28MB       |
+        | HAT     | IPQ + bucket | ✓            | 128    | 8-4-4-8    | 24       | **34.65** | 53MB       |
+        | HAT     | IPQ+B+S8     | ✓            | 128    | 8-4-4-8    | 24       | ??        | ??         |
+        | HAT     | IPQ + bucket | ✓            | 256    | 2-2-2-2    | 24       | 34.58     | 70MB       |
+        | HAT     | IPQ + bucket | ✓            | 256    | 4-4-4-4    | 24       | 34.63     | 78MB       |
+        | HAT     | IPQ + bucket | ✓            | 512    | 2-2-2-2    | 24       | 34.44     | 100MB      |
+        
+        
+        WMT14 fr-en(Shared Vocab):
+        
+        |                                      | Quant Type   | Quant. Noise | Bucket | FT Epoch | BLEU      | Model Size |
+        |--------------------------------------|--------------|--------------|--------|----------|-----------|------------|
+        | BaseHAT                              | N/A          | ✓            | -      | -        | 41.42     | 380MB      |
+        | BaseHat                              | Scalar-8bit  | ✓            | -      | -        | ??        | 95MB       |
+        | BaseHat                              | Scalar-4bit  | ✓            | -      | -        | 40.35     | 47MB       |
+        | BaseHAT                              | N/A          | ✗            | -      | -        | **41.65** | 380MB      |
+        | HAT                                  | IPQ          | ✓            | -      | 6        | 36.04     | **19MB**   |
+        | HAT                                  | IPQ + bucket | ✓            | 16     | 6        | 37.27     | 23MB       |
+        | HAT                                  | IPQ + bucket | ✓            | 32     | 6        | 37.87     | 27MB       |
+        | HAT                                  | IPQ + bucket | ✓            | 64     | 6        | 38.22     | 35MB       |
+        | HAT                                  | IPQ + bucket | ✓            | 64     | 12       | 38.24     | 35MB       |
+        | HAT                                  | IPQ + bucket | ✓            | 64     | 24       | 38.45     | 35MB       |
+        | HAT                                  | IPQ + bucket | ✓            | 64     | 36       | 38.11     | 35MB       |
+        | HAT                                  | IPQ + bucket | ✓            | 128    | 6        | 38.59 | 52MB       |
+        | HAT                                  | IPQ + bucket | ✓            | 128(E-4x)    | 6        | **38.81** | 55MB       |
+        | HAT                                  | IPQ + B + S4  | ✓            | 128    | 6       | 37.16     | ??         |
+        | HAT                                  | IPQ + B + S8  | ✓            | 128    | 6       | 37.55     | ??         |
+        | https://arxiv.org/pdf/1910.10485.pdf | N/A          | ✗            | -      | -        | **39.91** | 500MB      |
+        
+        
+        WMT14 de-en
+        
+        |                                      | Quant Type   | Quant. Noise | Bucket | BLEU      | Model Size |
+        |--------------------------------------|--------------|--------------|--------|-----------|------------|
+        | BaseHAT                              | N/A          | ✓            | -      | 27.31     | 350MB      |
+        | HAT                                  | Scalar-8bit  | ✓            | -      | 27.35     | 87MB       |
+        | HAT                                  | Scalar-4bit  | ✓            | -      | 26.36     | 43MB       |
+        | BaseHAT                              | N/A          | ✗            | -      | ??        | 350MB      |
+        | HAT                                  | IPQ          | ✓            | -      | 22.13     | **17MB**   |
+        | HAT                                  | IPQ + bucket | ✓            | 128    | **24.92** | 50MB       |
+        | HAT                                  | IPQ + B + S8 | ✓            | 128    | ??        | ??         |
+        | https://arxiv.org/pdf/1910.10485.pdf | N/A          | ✗            | -      | **27.60** | 500MB      |
+        
+        
+        ### Dependencies
+        * Python >= 3.6
+        * [PyTorch](http://pytorch.org/) >= 1.0.0
+        * configargparse >= 0.14
+        * New model training requires NVIDIA GPUs and [NCCL](https://github.com/NVIDIA/nccl)
+        
+        ## Roadmap
+        
+        Bucketing -->  Fully Quantized Transformer for Machine Translation (https://arxiv.org/pdf/1910.10485.pdf, https://arxiv.org/abs/1610.02132)
+        
+        HAT --> (HAT: Hardware-Aware Transformers for Efficient Natural Language Processing (https://arxiv.org/abs/2005.14187)
+        
+        IPQ --> Training with Quantization Noise for Extreme Model Compression (https://arxiv.org/abs/2004.07320)
+        
+        - Use 4 bit to encode assignments using more buckets (for now its 8 bits)
+        - Compress large pre-trained language models like RoBERTA, BERT etc.
+        - Apply scalar quantization on buckets
+        - Shared centroids accross the layers
+        - 1D weight resampling https://github.com/adefossez/julius/
+        
+        ## Licence
+        
+        This repository is released under the MIT license. See [LICENSE](./LICENSE) for more information.
+        
+        ## Acknowledgements
+        
+        We are thankful to [fairseq](https://github.com/pytorch/fairseq) as the backbone of this repo.
+        
+Platform: UNKNOWN
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.6
+Description-Content-Type: text/markdown
