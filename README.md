@@ -2,24 +2,20 @@
 This repo implements a new method called DAQ (Divide-and-Quantize) which essentially divides big weight matrices into flexible chunks and quantizes them separately. 
 
 
-# HAT [[paper]](https://arxiv.org/abs/2005.14187) + Training with Quantization Noise for Extreme Model Compression [[paper]](https://arxiv.org/abs/2004.07320)
-
-This repository contains the application of *Training with Quantization Noise for Extreme Model Compression* on HAT. With that we achieve high compression rates.
-
 ## Usage
 
 ### Installation
 To install from source and develop locally:
 
 ```bash
-git clone remote
+git clone https://github.com/Luccadoremi/Model-Compression-DAQ.git
 cd hat
 pip install --editable .
 ```
 
 ### Training
 
-#### 1. Train a SuperTransformer
+#### 1. Train a SuperTransformer (HAT [[paper]](https://arxiv.org/abs/2005.14187))
 The SuperTransformer is a supernet that contains many SubTransformers with weight-sharing.
 By default, we train WMT tasks on 8 GPUs. Please adjust `--update-freq` according to GPU numbers (`128/x` for x GPUs). Note that for IWSLT, we only train on one GPU with `--update-freq=1`. 
 ```bash
@@ -31,7 +27,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python train-our.py --configs=configs/wmt14.en-fr/s
 ```
 In the `--configs` file, SuperTransformer model architecture, SubTransformer search space and training settings are specified.
 
-#### 3. Train a Searched SubTransformer
+#### 3. Train a Searched SubTransformer (Training with Quantization Noise for Extreme Model Compression [[paper]](https://arxiv.org/abs/2004.07320))
 For details please check the script.
 
 ```bash
@@ -67,18 +63,12 @@ For details please check the script.
 * [PyTorch](http://pytorch.org/) >= 1.0.0
 * configargparse >= 0.14
 * New model training requires NVIDIA GPUs and [NCCL](https://github.com/NVIDIA/nccl)
+* sklearn
 
 ## Roadmap
 
-Bucketing -->  Fully Quantized Transformer for Machine Translation (https://arxiv.org/pdf/1910.10485.pdf, https://arxiv.org/abs/1610.02132)
-
-HAT --> (HAT: Hardware-Aware Transformers for Efficient Natural Language Processing (https://arxiv.org/abs/2005.14187)
-
-IPQ --> Training with Quantization Noise for Extreme Model Compression (https://arxiv.org/abs/2004.07320)
 
 - Use 4 bit to encode assignments using more buckets (for now its 8 bits)
-- Compress large pre-trained language models like RoBERTA, BERT etc.
-- Apply scalar quantization on buckets
 - Shared centroids accross the layers
 - 1D weight resampling https://github.com/adefossez/julius/
 
@@ -88,5 +78,5 @@ This repository is released under the MIT license. See [LICENSE](./LICENSE) for 
 
 ## Acknowledgements
 
-We are thankful to [fairseq](https://github.com/pytorch/fairseq) as the backbone of this repo.
+[fairseq](https://github.com/pytorch/fairseq), [HAT](https://github.com/mit-han-lab/hardware-aware-transformers)
 =======
