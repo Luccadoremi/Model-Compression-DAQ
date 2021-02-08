@@ -1,7 +1,6 @@
 checkpoint*/
 head-ipq-chk*/
 ipq-chk/
-data/
 downloaded_models/
 *__pycache__*
 build/
